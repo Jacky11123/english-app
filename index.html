@@ -483,6 +483,9 @@ function setSettingsLock(locked){
 }
 
 g("settingsBtn").onclick=function(){
+  // 開抽屜時先把 select 同步成目前已存的設定值
+  g("grade").value=String(s.grade);g("goal").value=String(s.goal);
+  g("mode").value=s.mode;g("practiceScope").value=s.practiceScope;g("roundSize").value=String(s.roundSize);
   g("drawerOverlay").classList.add("open");
   g("drawer").classList.add("open")
 };
@@ -531,8 +534,11 @@ function stats(){
   g("due").textContent=due;g("accuracy").textContent=s.total?Math.round(s.good/s.total*100)+"%":"0%";
   g("dailyFill").style.width=Math.min(100,s.today/s.goal*100)+"%";g("dailyText").textContent=s.today+" / "+s.goal;
   g("totalFill").style.width=(list.length?known/list.length*100:0)+"%";g("totalText").textContent=known+" / "+list.length;
-  g("grade").value=String(s.grade);g("goal").value=String(s.goal);
-  g("mode").value=s.mode;g("practiceScope").value=s.practiceScope;g("roundSize").value=String(s.roundSize);
+  // 只在抽屜關閉時才更新 select，避免覆蓋使用者正在修改的值
+  if(!g("drawer").classList.contains("open")){
+    g("grade").value=String(s.grade);g("goal").value=String(s.goal);
+    g("mode").value=s.mode;g("practiceScope").value=s.practiceScope;g("roundSize").value=String(s.roundSize);
+  }
   g("heroTitle").textContent=s.today>=s.goal?"🎉 今日目標完成！":"今天還有 "+Math.max(0,s.goal-s.today)+" 個新字目標";
   g("heroText").textContent=due?"目前有 "+due+" 個單字等待複習。":"完成今日任務後，仍可自由練習。";
 }
@@ -575,7 +581,7 @@ function buildWeightedMixed(list,size){
 function buildPool(cat,scope){
   var unlocked=allowed(),currentGrade=WORDS.filter(function(w){return w.grade===s.grade}),base,size=s.roundSize||20,now=Date.now();
   if(cat&&cat!=="全部")base=unlocked.filter(function(w){return w.category===cat});
-  else if(scope==="current")base=currentGrade;
+  else if(scope==="current")base=unlocked; // 目前年級以內全部（含低年級），非只當前年級
   else if(scope==="all")base=unlocked;
   else base=unlocked;
   var fresh=base.filter(function(w){return!s.progress[String(w.id)]});
