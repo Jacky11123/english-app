@@ -589,7 +589,20 @@ function buildPool(cat,scope){
   var due=base.filter(function(w){var p=s.progress[String(w.id)];return p&&p.due<=now});
   if(scope==="weak")return base.filter(function(w){return weakScore(w)>0||due.indexOf(w)>=0}).sort(function(a,b){return weakScore(b)-weakScore(a)}).slice(0,size);
   if(scope==="learned")return shuffle(learned).slice(0,size);
-  if(scope==="all"||scope==="unlocked"||scope==="current")return buildWeightedMixed(base,size);
+  // 自由練習模式：尊重 s.mode 設定
+  if(scope==="all"||scope==="unlocked"||scope==="current"){
+    if(s.mode==="new"){
+      // 只學新字：只抽未學過的字
+      var onlyFresh=shuffle(base.filter(function(w){return!s.progress[String(w.id)]}));
+      return onlyFresh.length>0?onlyFresh.slice(0,size):shuffle(learned).slice(0,size);
+    }
+    if(s.mode==="review"){
+      // 只複習：只抽已學且到期的字
+      return shuffle(due).length>0?shuffle(due).slice(0,size):shuffle(learned).slice(0,size);
+    }
+    // 新字+複習：加權混合
+    return buildWeightedMixed(base,size);
+  }
   if(s.mode==="review")return shuffle(due);
   if(s.mode==="new"){var nw=shuffle(fresh).slice(0,Math.max(0,s.goal-s.today));return nw.length>0?nw:shuffle(learned).slice(0,size)}
   return shuffle(due).concat(shuffle(fresh).slice(0,Math.max(0,s.goal-s.today)))
