@@ -298,6 +298,8 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
       <label class="soft" style="cursor:pointer;text-align:center">匯入<input id="importFile" type="file" accept=".json" hidden></label>
       <button type="button" class="soft" id="resetBtn">重設</button>
     </div>
+    <button type="button" id="confirmSettings" style="width:100%;margin-top:12px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--purple),#9c64ed);color:#fff;padding:14px;font-weight:900;font-size:15px">✅ 確認套用設定</button>
+    <div id="settingsLockMsg" style="display:none;margin-top:10px;background:#fff3cd;border-radius:10px;padding:10px;font-size:13px;color:#856404;text-align:center">⚠️ 練習中無法修改設定<br>請先返回今日任務再調整</div>
   </div>
 </div>
 
@@ -459,6 +461,7 @@ function showPage(name){
   document.querySelectorAll(".bottom-nav button").forEach(function(b){b.classList.remove("active")});
   g("page-"+name).classList.add("active");
   document.querySelector(".bottom-nav button[data-page='"+name+"']").classList.add("active");
+  if(name==="dashboard"){setSettingsLock(false)}
   if(name==="match")newMatch();
   if(name==="progress")renderProgress();
   if(name==="cards")startCards(topic,s.practiceScope);
@@ -468,6 +471,17 @@ document.querySelectorAll(".bottom-nav button").forEach(function(b){
 });
 
 /* ── Settings drawer ── */
+var isPracticing = false; // 練習中鎖定旗標
+
+function setSettingsLock(locked){
+  isPracticing = locked;
+  var selects = ["grade","goal","mode","practiceScope","roundSize"];
+  selects.forEach(function(id){g(id).disabled=locked});
+  g("confirmSettings").style.display = locked ? "none" : "block";
+  g("settingsLockMsg").style.display = locked ? "block" : "none";
+  g("settingsBtn").style.opacity = locked ? "0.4" : "1";
+}
+
 g("settingsBtn").onclick=function(){
   g("drawerOverlay").classList.add("open");
   g("drawer").classList.add("open")
@@ -478,11 +492,19 @@ g("drawerOverlay").onclick=function(e){
     g("drawer").classList.remove("open")
   }
 };
-g("grade").onchange=function(){s.grade=parseInt(this.value,10);save();stats();renderTopics();renderProgress()};
-g("goal").onchange=function(){s.goal=parseInt(this.value,10);save();stats()};
-g("mode").onchange=function(){s.mode=this.value;save()};
-g("practiceScope").onchange=function(){s.practiceScope=this.value;save();stats()};
-g("roundSize").onchange=function(){s.roundSize=parseInt(this.value,10)||20;save()};
+
+// 確認套用設定
+g("confirmSettings").onclick=function(){
+  s.grade=parseInt(g("grade").value,10);
+  s.goal=parseInt(g("goal").value,10);
+  s.mode=g("mode").value;
+  s.practiceScope=g("practiceScope").value;
+  s.roundSize=parseInt(g("roundSize").value,10)||20;
+  save();stats();renderTopics();renderProgress();
+  g("drawerOverlay").classList.remove("open");
+  g("drawer").classList.remove("open");
+};
+
 g("resetBtn").onclick=function(){if(confirm("確定清除所有學習進度？")){localStorage.removeItem(KEY);location.reload()}};
 g("exportBtn").onclick=function(){
   var blob=new Blob([JSON.stringify(s,null,2)],{type:"application/json"}),a=document.createElement("a");
@@ -568,6 +590,7 @@ function startCards(cat,scope){
   topic=cat||"全部";s.practiceScope=scope||s.practiceScope||"mission";save();
   pool=buildPool(topic,s.practiceScope);
   currentRoundIsMixed=s.practiceScope!=="mission";currentRoundAnswered=0;currentRoundCorrect=0;
+  setSettingsLock(true);
   nextCard()
 }
 function nextCard(){
