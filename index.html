@@ -331,16 +331,28 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
 </div>
 
 <div id="page-cards" class="page">
-  <div class="card-status">
-    <span class="range" id="rangeInfo"></span>
-    <span class="queue">剩 <span id="queueInfo">0</span> 張</span>
+  <!-- 閃卡選單：選擇練習類型 -->
+  <div id="cardsMenu">
+    <div class="section-title">🃏 選擇練習</div>
+    <button type="button" class="primary" id="menuToday" style="width:100%;margin-bottom:10px">🎯 今日任務</button>
+    <button type="button" class="soft" id="menuFree" style="width:100%;margin-bottom:10px;padding:13px">📚 自由練習（依設定範圍）</button>
+    <button type="button" class="soft" id="menuWeak" style="width:100%;margin-bottom:10px;padding:13px">⚠️ 弱點加強</button>
+    <button type="button" class="soft" id="menuLearned" style="width:100%;padding:13px">📖 複習已學單字</button>
+    <p style="font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6">提示：可在右上角 ⚙️ 設定調整年級、學習模式與每輪題數，再選上方練習類型。</p>
   </div>
-  <div id="cardArea" class="flashcard"></div>
-  <div id="answerPanel" class="answer-panel">
-    <div class="zh" id="cardZh"></div>
-    <div class="example" id="cardExample"></div>
+  <!-- 練習進行畫面 -->
+  <div id="cardsPlay" style="display:none">
+    <div class="card-status">
+      <span class="range" id="rangeInfo"></span>
+      <span class="queue">剩 <span id="queueInfo">0</span> 張</span>
+    </div>
+    <div id="cardArea" class="flashcard"></div>
+    <div id="answerPanel" class="answer-panel">
+      <div class="zh" id="cardZh"></div>
+      <div class="example" id="cardExample"></div>
+    </div>
+    <div id="cardButtons"></div>
   </div>
-  <div id="cardButtons"></div>
 </div>
 
 <div id="page-match" class="page">
@@ -475,10 +487,15 @@ function showPage(name){
   document.querySelectorAll(".bottom-nav button").forEach(function(b){b.classList.remove("active")});
   g("page-"+name).classList.add("active");
   document.querySelector(".bottom-nav button[data-page='"+name+"']").classList.add("active");
-  if(name==="dashboard"){setSettingsLock(false)}
+  // 切到任何分頁都先解鎖設定（只有實際練習進行中才鎖）
+  setSettingsLock(false);
   if(name==="match")newMatch();
   if(name==="progress")renderProgress();
-  if(name==="cards")startCards(topic,s.practiceScope);
+  if(name==="cards"){
+    // 顯示閃卡選單，不自動開始練習
+    g("cardsMenu").style.display="block";
+    g("cardsPlay").style.display="none";
+  }
 }
 document.querySelectorAll(".bottom-nav button").forEach(function(b){
   b.onclick=function(){showPage(b.getAttribute("data-page"))}
@@ -575,15 +592,30 @@ function renderTopics(){
     var a=map[cat],k=a.filter(function(w){return!!s.progress[String(w.id)]}).length;
     var b=document.createElement("button");b.type="button";b.className="topic";
     b.innerHTML='<span class="icon">'+a[0].emoji+'</span><b>'+cat+'</b><small>'+k+' / '+a.length+' 已學</small>';
-    b.onclick=function(){startCards(cat,s.practiceScope==="mission"?"current":s.practiceScope);showPage("cards")};
+    b.onclick=function(){
+      var sc=s.practiceScope==="mission"?"current":s.practiceScope;
+      document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active")});
+      document.querySelectorAll(".bottom-nav button").forEach(function(bb){bb.classList.remove("active")});
+      g("page-cards").classList.add("active");
+      document.querySelector(".bottom-nav button[data-page='cards']").classList.add("active");
+      startCards(cat,sc);
+    };
     box.appendChild(b)
   })
 }
 
 /* ── Dashboard buttons ── */
-g("startToday").onclick=function(){s.practiceScope="mission";save();stats();startCards("全部","mission");showPage("cards")};
-g("startWeak").onclick=function(){s.practiceScope="weak";save();stats();startCards("全部","weak");showPage("cards")};
-g("startLearned").onclick=function(){s.practiceScope="learned";save();stats();startCards("全部","learned");showPage("cards")};
+function goToCardsAndStart(scope){
+  // 切到閃卡分頁的 active 狀態，但直接進入練習（不顯示選單）
+  document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active")});
+  document.querySelectorAll(".bottom-nav button").forEach(function(b){b.classList.remove("active")});
+  g("page-cards").classList.add("active");
+  document.querySelector(".bottom-nav button[data-page='cards']").classList.add("active");
+  startCards("全部",scope);
+}
+g("startToday").onclick=function(){goToCardsAndStart("mission")};
+g("startWeak").onclick=function(){goToCardsAndStart("weak")};
+g("startLearned").onclick=function(){goToCardsAndStart("learned")};
 
 /* ── Weak score ── */
 function weakScore(w){
@@ -674,9 +706,17 @@ function startCards(cat,scope){
   topic=cat||"全部";s.practiceScope=scope||s.practiceScope||"mission";save();
   pool=buildPool(topic,s.practiceScope);
   currentRoundIsMixed=s.practiceScope!=="mission";currentRoundAnswered=0;currentRoundCorrect=0;
+  // 切到練習進行畫面
+  g("cardsMenu").style.display="none";
+  g("cardsPlay").style.display="block";
   setSettingsLock(true);
   nextCard()
 }
+// 閃卡選單按鈕
+g("menuToday").onclick=function(){startCards("全部","mission")};
+g("menuFree").onclick=function(){startCards("全部","current")};
+g("menuWeak").onclick=function(){startCards("全部","weak")};
+g("menuLearned").onclick=function(){startCards("全部","learned")};
 function nextCard(){
   current=pool.shift()||null;revealed=false;
   g("queueInfo").textContent=pool.length;
@@ -701,9 +741,11 @@ function nextCard(){
     var summary=currentRoundAnswered>0?'<p style="color:var(--muted);font-size:14px">作答 '+currentRoundAnswered+' 題，記得 '+currentRoundCorrect+' 題</p>':"";
     g("cardArea").innerHTML='<div class="bigemoji">🎉</div><div class="word" style="font-size:22px;margin:8px 0">'+title+'</div>'+emptyMsg+summary;
     var replayScope=s.practiceScope==="mission"?"learned":s.practiceScope;
-    g("cardButtons").innerHTML='<button class="primary" id="againRound" style="width:100%;margin-bottom:10px">再練一輪</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回今日任務</button>';
+    g("cardButtons").innerHTML='<button class="primary" id="againRound" style="width:100%;margin-bottom:10px">再練一輪</button><button class="soft" id="backToMenu" style="width:100%;margin-bottom:10px;padding:13px">選其他練習</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回首頁</button>';
     g("againRound").onclick=function(){startCards(topic,replayScope)};
+    g("backToMenu").onclick=function(){setSettingsLock(false);g("cardsMenu").style.display="block";g("cardsPlay").style.display="none"};
     g("doneBack").onclick=function(){showPage("dashboard");stats();renderTopics()};
+    setSettingsLock(false); // 練習結束解鎖
     stats();return
   }
   renderCard()
