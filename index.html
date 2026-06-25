@@ -579,8 +579,10 @@ function nextCard(){
   if(!current){
     if(currentRoundIsMixed&&currentRoundAnswered>0){s.mixedRounds++;save()}
     g("cardArea").innerHTML='<div class="bigemoji">🎉</div><div class="word" style="font-size:22px;margin:8px 0">本輪完成！</div><p style="color:var(--muted);font-size:14px">作答 '+currentRoundAnswered+' 題，記得 '+currentRoundCorrect+' 題</p>';
-    g("cardButtons").innerHTML='<button class="primary" id="againRound" style="margin-bottom:10px">再練一輪</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回今日任務</button>';
-    g("againRound").onclick=function(){startCards(topic,s.practiceScope)};
+    // 再練一輪：mission完成後改走learned避免空pool
+    var replayScope=s.practiceScope==="mission"?"learned":s.practiceScope;
+    g("cardButtons").innerHTML='<button class="primary" id="againRound" style="width:100%;margin-bottom:10px">再練一輪</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回今日任務</button>';
+    g("againRound").onclick=function(){startCards(topic,replayScope)};
     g("doneBack").onclick=function(){showPage("dashboard");stats();renderTopics()};
     stats();return
   }
