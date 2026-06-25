@@ -586,19 +586,19 @@ function buildPool(cat,scope){
   var learned=base.filter(function(w){return!!s.progress[String(w.id)]});
   var due=base.filter(function(w){var p=s.progress[String(w.id)];return p&&p.due<=now});
   if(scope==="weak")return base.filter(function(w){return weakScore(w)>0||due.indexOf(w)>=0}).sort(function(a,b){return weakScore(b)-weakScore(a)}).slice(0,size);
-  if(scope==="learned")return shuffle(learned).slice(0,size);
+  if(scope==="learned"){
+    // 只練已學：忽略 mode，永遠只出已學的字；沒有已學字時給提示用空陣列
+    return shuffle(learned).slice(0,size);
+  }
   // 自由練習模式：尊重 s.mode 設定
   if(scope==="all"||scope==="unlocked"||scope==="current"){
     if(s.mode==="new"){
-      // 只學新字：只抽未學過的字
       var onlyFresh=shuffle(base.filter(function(w){return!s.progress[String(w.id)]}));
       return onlyFresh.length>0?onlyFresh.slice(0,size):shuffle(learned).slice(0,size);
     }
     if(s.mode==="review"){
-      // 只複習：只抽已學且到期的字
       return shuffle(due).length>0?shuffle(due).slice(0,size):shuffle(learned).slice(0,size);
     }
-    // 新字+複習：加權混合
     return buildWeightedMixed(base,size);
   }
   if(s.mode==="review")return shuffle(due);
@@ -633,8 +633,21 @@ function nextCard(){
   g("cardButtons").innerHTML="";
   if(!current){
     if(currentRoundIsMixed&&currentRoundAnswered>0){s.mixedRounds++;save()}
-    g("cardArea").innerHTML='<div class="bigemoji">🎉</div><div class="word" style="font-size:22px;margin:8px 0">本輪完成！</div><p style="color:var(--muted);font-size:14px">作答 '+currentRoundAnswered+' 題，記得 '+currentRoundCorrect+' 題</p>';
-    // 再練一輪：mission完成後改走learned避免空pool
+    var emptyMsg="";
+    if(currentRoundAnswered===0){
+      if(s.practiceScope==="learned"){
+        emptyMsg="<p style='color:var(--red);font-size:13px'>⚠️ 還沒有已學單字，請先完成今日任務！</p>";
+      }else if(s.mode==="new"&&s.today>=s.goal){
+        emptyMsg="<p style='color:var(--muted);font-size:13px'>今日新字目標已達成，請將模式改為「新字＋複習」繼續練習。</p>";
+      }else if(s.mode==="review"){
+        emptyMsg="<p style='color:var(--muted);font-size:13px'>目前沒有待複習的單字，請先學一些新字！</p>";
+      }else{
+        emptyMsg="<p style='color:var(--muted);font-size:13px'>目前沒有可練習的單字，請確認設定是否正確。</p>";
+      }
+    }
+    var title=currentRoundAnswered>0?"本輪完成！":"沒有題目 😅";
+    var summary=currentRoundAnswered>0?'<p style="color:var(--muted);font-size:14px">作答 '+currentRoundAnswered+' 題，記得 '+currentRoundCorrect+' 題</p>':"";
+    g("cardArea").innerHTML='<div class="bigemoji">🎉</div><div class="word" style="font-size:22px;margin:8px 0">'+title+'</div>'+emptyMsg+summary;
     var replayScope=s.practiceScope==="mission"?"learned":s.practiceScope;
     g("cardButtons").innerHTML='<button class="primary" id="againRound" style="width:100%;margin-bottom:10px">再練一輪</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回今日任務</button>';
     g("againRound").onclick=function(){startCards(topic,replayScope)};
