@@ -469,12 +469,17 @@ document.querySelectorAll(".bottom-nav button").forEach(function(b){
 });
 
 /* ── Settings drawer ── */
-var isPracticing = false; // 練習中鎖定旗標
+var isPracticing = false;
 
 function setSettingsLock(locked){
   isPracticing = locked;
   var selects = ["grade","goal","mode","practiceScope","roundSize"];
-  selects.forEach(function(id){g(id).disabled=locked});
+  selects.forEach(function(id){
+    var el=g(id);
+    el.style.pointerEvents = locked ? "none" : "";
+    el.style.opacity = locked ? "0.4" : "";
+    // 不用 disabled，避免 Safari 讀值失敗
+  });
   g("confirmSettings").style.display = locked ? "none" : "block";
   g("settingsLockMsg").style.display = locked ? "block" : "none";
   g("settingsBtn").style.opacity = locked ? "0.4" : "1";
@@ -496,15 +501,20 @@ g("drawerOverlay").onclick=function(e){
 
 // 確認套用設定
 g("confirmSettings").onclick=function(){
-  s.grade=parseInt(g("grade").value,10);
-  s.goal=parseInt(g("goal").value,10);
-  s.mode=g("mode").value;
-  s.practiceScope=g("practiceScope").value;
-  s.roundSize=parseInt(g("roundSize").value,10)||20;
+  var newGrade=parseInt(g("grade").value,10);
+  var newGoal=parseInt(g("goal").value,10);
+  var newMode=g("mode").value;
+  var newScope=g("practiceScope").value;
+  var newSize=parseInt(g("roundSize").value,10)||20;
+  // 防呆：確保值合法才存
+  if(newGrade>=1&&newGrade<=6) s.grade=newGrade;
+  if(newGoal>=5&&newGoal<=20) s.goal=newGoal;
+  if(newMode) s.mode=newMode;
+  if(newScope) s.practiceScope=newScope;
+  if(newSize>=10) s.roundSize=newSize;
   save();
   g("drawerOverlay").classList.remove("open");
   g("drawer").classList.remove("open");
-  // 設定改變後一律回今日任務頁，解除鎖定，讓使用者重新開始
   setSettingsLock(false);
   showPage("dashboard");
   stats();renderTopics();renderProgress();
