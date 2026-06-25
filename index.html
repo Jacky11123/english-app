@@ -505,17 +505,9 @@ document.querySelectorAll(".bottom-nav button").forEach(function(b){
 var isPracticing = false;
 
 function setSettingsLock(locked){
+  // 不再鎖定 select，因為「確認套用設定」機制已能防止練習中亂改
+  // 確認設定後會跳回首頁，不會在練習途中生效
   isPracticing = locked;
-  var selects = ["grade","goal","mode","practiceScope","roundSize"];
-  selects.forEach(function(id){
-    var el=g(id);
-    el.style.pointerEvents = locked ? "none" : "";
-    el.style.opacity = locked ? "0.4" : "";
-    // 不用 disabled，避免 Safari 讀值失敗
-  });
-  g("confirmSettings").style.display = locked ? "none" : "block";
-  g("settingsLockMsg").style.display = locked ? "block" : "none";
-  g("settingsBtn").style.opacity = locked ? "0.4" : "1";
 }
 
 g("settingsBtn").onclick=function(){
@@ -720,7 +712,10 @@ g("menuLearned").onclick=function(){startCards("全部","learned")};
 function nextCard(){
   current=pool.shift()||null;revealed=false;
   g("queueInfo").textContent=pool.length;
-  g("rangeInfo").textContent=topic==="全部"?s.practiceScope:topic;
+  var scopeNames={mission:"今日任務",current:"自由練習",weak:"弱點加強",learned:"複習已學"};
+  var modeNames={mixed:"新字+複習",review:"只複習",new:"只學新字"};
+  var gradeNames=["","一","二","三","四","五","六"];
+  g("rangeInfo").textContent=(topic==="全部"?(scopeNames[s.practiceScope]||s.practiceScope):topic)+"・1~"+gradeNames[s.grade]+"年級";
   g("answerPanel").classList.remove("show");
   g("cardButtons").innerHTML="";
   if(!current){
