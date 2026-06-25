@@ -500,9 +500,13 @@ g("confirmSettings").onclick=function(){
   s.mode=g("mode").value;
   s.practiceScope=g("practiceScope").value;
   s.roundSize=parseInt(g("roundSize").value,10)||20;
-  save();stats();renderTopics();renderProgress();
+  save();
   g("drawerOverlay").classList.remove("open");
   g("drawer").classList.remove("open");
+  // 設定改變後一律回今日任務頁，解除鎖定，讓使用者重新開始
+  setSettingsLock(false);
+  showPage("dashboard");
+  stats();renderTopics();renderProgress();
 };
 
 g("resetBtn").onclick=function(){if(confirm("確定清除所有學習進度？")){localStorage.removeItem(KEY);location.reload()}};
