@@ -282,8 +282,6 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
       <select id="practiceScope">
         <option value="mission">今日任務</option>
         <option value="current">目前年級自由練習</option>
-        <option value="unlocked">已解鎖年級混合</option>
-        <option value="all">已解鎖年級全混合</option>
         <option value="weak">弱點加強</option>
         <option value="learned">只練已學單字</option>
       </select>
@@ -324,8 +322,8 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
     <p id="heroText">完成每日目標後，可再進行混合與弱點練習。</p>
     <button type="button" id="startToday" class="primary">🎯 開始今日任務</button>
     <div class="btn-row">
-      <button type="button" id="startMixed" class="soft">🔀 混合練習</button>
       <button type="button" id="startWeak" class="soft">⚠️ 弱點加強</button>
+      <button type="button" id="startLearned" class="soft">📖 複習已學</button>
     </div>
   </div>
   <div class="section-title">主題島</div>
@@ -558,8 +556,8 @@ function renderTopics(){
 
 /* ── Dashboard buttons ── */
 g("startToday").onclick=function(){s.practiceScope="mission";save();stats();startCards("全部","mission");showPage("cards")};
-g("startMixed").onclick=function(){s.practiceScope="all";save();stats();startCards("全部","all");showPage("cards")};
 g("startWeak").onclick=function(){s.practiceScope="weak";save();stats();startCards("全部","weak");showPage("cards")};
+g("startLearned").onclick=function(){s.practiceScope="learned";save();stats();startCards("全部","learned");showPage("cards")};
 
 /* ── Weak score ── */
 function weakScore(w){
