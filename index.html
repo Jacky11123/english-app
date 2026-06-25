@@ -161,6 +161,10 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
 .note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
 
 .hidden{display:none!important}
+.grade-btn{border:2px solid var(--line);background:#f7f9fc;border-radius:10px;padding:10px 4px;font-weight:900;font-size:13px;color:var(--muted)}
+.grade-btn.active-grade{border-color:var(--purple);background:linear-gradient(135deg,var(--purple),#9a62eb);color:#fff}
+.mode-btn{border:2px solid var(--line);background:#f7f9fc;border-radius:12px;padding:12px 14px;font-weight:700;font-size:14px;text-align:left;color:var(--ink)}
+.mode-btn.active-mode{border-color:var(--purple);background:#f0efff;color:var(--purple);font-weight:900}
 
 /* ── Install guide overlay ── */
 .install-overlay{
@@ -331,15 +335,38 @@ select{border:1px solid var(--line);background:#f7f9fc;border-radius:10px;paddin
 </div>
 
 <div id="page-cards" class="page">
-  <!-- 閃卡選單：選擇練習類型 -->
+  <!-- 閃卡選單：在這裡選好年級和練習方式再開始 -->
   <div id="cardsMenu">
-    <div class="section-title">🃏 選擇練習</div>
-    <button type="button" class="primary" id="menuToday" style="width:100%;margin-bottom:10px">🎯 今日任務</button>
-    <button type="button" class="soft" id="menuFree" style="width:100%;margin-bottom:10px;padding:13px">📚 自由練習（依設定範圍）</button>
-    <button type="button" class="soft" id="menuWeak" style="width:100%;margin-bottom:10px;padding:13px">⚠️ 弱點加強</button>
-    <button type="button" class="soft" id="menuLearned" style="width:100%;padding:13px">📖 複習已學單字</button>
-    <p style="font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6">提示：可在右上角 ⚙️ 設定調整年級、學習模式與每輪題數，再選上方練習類型。</p>
+    <div class="section-title">🃏 閃卡練習</div>
+
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)">
+      <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:8px">年級範圍</div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px" id="gradeSelector">
+        <button type="button" class="grade-btn" data-grade="1">1年</button>
+        <button type="button" class="grade-btn" data-grade="2">2年</button>
+        <button type="button" class="grade-btn" data-grade="3">3年</button>
+        <button type="button" class="grade-btn" data-grade="4">4年</button>
+        <button type="button" class="grade-btn" data-grade="5">5年</button>
+        <button type="button" class="grade-btn" data-grade="6">6年</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">選幾年級就練 1 到幾年級的單字</div>
+    </div>
+
+    <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)">
+      <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:8px">練習方式</div>
+      <div style="display:grid;gap:8px" id="modeSelector">
+        <button type="button" class="mode-btn active-mode" data-scope="current" data-mode="mixed">🔀 自由練習（新字＋複習混合）</button>
+        <button type="button" class="mode-btn" data-scope="current" data-mode="new">🌱 只練新字</button>
+        <button type="button" class="mode-btn" data-scope="mission" data-mode="mixed">🎯 今日任務（受每日上限控制）</button>
+        <button type="button" class="mode-btn" data-scope="weak" data-mode="mixed">⚠️ 弱點加強</button>
+        <button type="button" class="mode-btn" data-scope="learned" data-mode="mixed">📖 複習已學單字</button>
+      </div>
+    </div>
+
+    <button type="button" class="primary" id="startPractice" style="width:100%">▶ 開始練習</button>
+    <div id="menuInfo" style="margin-top:10px;background:#f0efff;border-radius:10px;padding:10px;font-size:13px;color:#513bc8;text-align:center"></div>
   </div>
+
   <!-- 練習進行畫面 -->
   <div id="cardsPlay" style="display:none">
     <div class="card-status">
@@ -492,9 +519,9 @@ function showPage(name){
   if(name==="match")newMatch();
   if(name==="progress")renderProgress();
   if(name==="cards"){
-    // 顯示閃卡選單，不自動開始練習
     g("cardsMenu").style.display="block";
     g("cardsPlay").style.display="none";
+    initCardsMenu();
   }
 }
 document.querySelectorAll(".bottom-nav button").forEach(function(b){
@@ -617,17 +644,21 @@ function renderTopics(){
 }
 
 /* ── Dashboard buttons ── */
-function goToCardsAndStart(scope){
-  // 切到閃卡分頁的 active 狀態，但直接進入練習（不顯示選單）
+function goToCardsAndStart(scope, mode){
+  menuScope = scope;
+  menuMode = mode || "mixed";
+  menuGrade = s.grade;
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active")});
   document.querySelectorAll(".bottom-nav button").forEach(function(b){b.classList.remove("active")});
   g("page-cards").classList.add("active");
   document.querySelector(".bottom-nav button[data-page='cards']").classList.add("active");
-  startCards("全部",scope);
+  // 直接開始，不顯示選單
+  s.mode=menuMode;
+  startCards("全部", menuScope);
 }
-g("startToday").onclick=function(){goToCardsAndStart("mission")};
-g("startWeak").onclick=function(){goToCardsAndStart("weak")};
-g("startLearned").onclick=function(){goToCardsAndStart("learned")};
+g("startToday").onclick=function(){goToCardsAndStart("mission","mixed")};
+g("startWeak").onclick=function(){goToCardsAndStart("weak","mixed")};
+g("startLearned").onclick=function(){goToCardsAndStart("learned","mixed")};
 
 /* ── Weak score ── */
 function weakScore(w){
@@ -714,6 +745,60 @@ function buildPool(cat,scope){
 }
 
 /* ── Flash cards ── */
+// 閃卡選單狀態
+var menuGrade = s.grade;  // 選單裡選的年級（獨立於 s.grade）
+var menuScope = "current"; // 選單裡選的 scope
+var menuMode  = "mixed";   // 選單裡選的 mode
+
+function initCardsMenu(){
+  // 年級按鈕
+  menuGrade = s.grade;
+  document.querySelectorAll(".grade-btn").forEach(function(b){
+    var g2=parseInt(b.getAttribute("data-grade"),10);
+    b.classList.toggle("active-grade", g2===menuGrade);
+    b.onclick=function(){
+      menuGrade=g2;
+      document.querySelectorAll(".grade-btn").forEach(function(x){x.classList.remove("active-grade")});
+      b.classList.add("active-grade");
+      updateMenuInfo();
+    };
+  });
+  // 練習方式按鈕
+  document.querySelectorAll(".mode-btn").forEach(function(b){
+    b.classList.remove("active-mode");
+    if(b.getAttribute("data-scope")===menuScope && b.getAttribute("data-mode")===menuMode){
+      b.classList.add("active-mode");
+    }
+    b.onclick=function(){
+      menuScope=b.getAttribute("data-scope");
+      menuMode=b.getAttribute("data-mode");
+      document.querySelectorAll(".mode-btn").forEach(function(x){x.classList.remove("active-mode")});
+      b.classList.add("active-mode");
+      updateMenuInfo();
+    };
+  });
+  updateMenuInfo();
+}
+
+function updateMenuInfo(){
+  var gradeNames=["","一","二","三","四","五","六"];
+  var scopeLabel={current:"自由練習",mission:"今日任務",weak:"弱點加強",learned:"複習已學"};
+  var modeLabel={mixed:"新字+複習",new:"只練新字",review:"只複習"};
+  var txt="1~"+gradeNames[menuGrade]+"年級・"+scopeLabel[menuScope];
+  if(menuScope==="current"||menuScope==="mission") txt+="・"+modeLabel[menuMode];
+  g("menuInfo").textContent="📋 "+txt;
+}
+
+g("startPractice").onclick=function(){
+  // 用選單選的設定開始練習（不影響 s.grade 全域設定）
+  var savedGrade=s.grade;
+  s.grade=menuGrade;  // 暫時換成選單年級
+  s.mode=menuMode;
+  startCards("全部", menuScope);
+  // startCards 結束後不需要還原 s.grade，讓它保持一致
+  save();
+};
+
 function startCards(cat,scope){
   topic=cat||"全部";s.practiceScope=scope||s.practiceScope||"mission";save();
   pool=buildPool(topic,s.practiceScope);
@@ -725,10 +810,7 @@ function startCards(cat,scope){
   nextCard()
 }
 // 閃卡選單按鈕
-g("menuToday").onclick=function(){startCards("全部","mission")};
-g("menuFree").onclick=function(){startCards("全部","current")};
-g("menuWeak").onclick=function(){startCards("全部","weak")};
-g("menuLearned").onclick=function(){startCards("全部","learned")};
+// 閃卡選單按鈕已改為 initCardsMenu() 處理
 function nextCard(){
   current=pool.shift()||null;revealed=false;
   g("queueInfo").textContent=pool.length;
@@ -758,7 +840,7 @@ function nextCard(){
     var replayScope=s.practiceScope==="mission"?"learned":s.practiceScope;
     g("cardButtons").innerHTML='<button class="primary" id="againRound" style="width:100%;margin-bottom:10px">再練一輪</button><button class="soft" id="backToMenu" style="width:100%;margin-bottom:10px;padding:13px">選其他練習</button><button class="soft" id="doneBack" style="width:100%;padding:13px">返回首頁</button>';
     g("againRound").onclick=function(){startCards(topic,replayScope)};
-    g("backToMenu").onclick=function(){setSettingsLock(false);g("cardsMenu").style.display="block";g("cardsPlay").style.display="none"};
+    g("backToMenu").onclick=function(){g("cardsMenu").style.display="block";g("cardsPlay").style.display="none";initCardsMenu()};
     g("doneBack").onclick=function(){showPage("dashboard");stats();renderTopics()};
     setSettingsLock(false); // 練習結束解鎖
     stats();return
