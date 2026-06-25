@@ -433,9 +433,25 @@ var s; try{s=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){s=null}
 if(!s)s={progress:{},stars:0,goal:10,grade:6,mode:"mixed",date:"",today:0,total:0,good:0,
   matchRounds:0,matchAttempts:0,matchCorrect:0,mixedRounds:0,mixedTotal:0,mixedCorrect:0,
   practiceScope:"mission",roundSize:20};
-["mixedRounds","mixedTotal","mixedCorrect","matchRounds","matchAttempts","matchCorrect"].forEach(function(k){if(typeof s[k]!=="number")s[k]=0});
-if(!s.practiceScope)s.practiceScope="mission";
-if(!s.roundSize)s.roundSize=20;
+
+// 資料完整性修復：修正任何壞掉或缺失的設定值
+if(!s.progress||typeof s.progress!=="object") s.progress={};
+["mixedRounds","mixedTotal","mixedCorrect","matchRounds","matchAttempts","matchCorrect","stars","total","good","today"].forEach(function(k){
+  if(typeof s[k]!=="number"||isNaN(s[k])) s[k]=0;
+});
+// grade 必須是 1-6 的有效數字
+if(typeof s.grade!=="number"||isNaN(s.grade)||s.grade<1||s.grade>6) s.grade=6;
+// goal 必須是有效數字
+if(typeof s.goal!=="number"||isNaN(s.goal)||s.goal<5) s.goal=10;
+// roundSize 必須是有效數字
+if(typeof s.roundSize!=="number"||isNaN(s.roundSize)||s.roundSize<10) s.roundSize=20;
+// mode 必須是三種合法值之一
+if(["mixed","review","new"].indexOf(s.mode)<0) s.mode="mixed";
+// practiceScope 必須是合法值之一
+if(["mission","current","weak","learned"].indexOf(s.practiceScope)<0) s.practiceScope="mission";
+if(typeof s.date!=="string") s.date="";
+// 修復完立即存回，覆蓋掉舊的壞資料
+try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}
 
 var pool=[],current=null,revealed=false,topic="全部",selected=null,combo=0;
 var currentRoundIsMixed=false,currentRoundAnswered=0,currentRoundCorrect=0;
@@ -587,6 +603,13 @@ function buildWeightedMixed(list,size){
   return result.slice(0,size)
 }
 function buildPool(cat,scope){
+  // 執行期防呆：確保關鍵設定值合法，避免空池
+  if(typeof s.grade!=="number"||isNaN(s.grade)||s.grade<1||s.grade>6) s.grade=6;
+  if(["mixed","review","new"].indexOf(s.mode)<0) s.mode="mixed";
+  if(typeof s.goal!=="number"||isNaN(s.goal)) s.goal=10;
+  if(typeof s.roundSize!=="number"||isNaN(s.roundSize)) s.roundSize=20;
+  if(typeof s.today!=="number"||isNaN(s.today)) s.today=0;
+
   var unlocked=allowed();
   var base,size=s.roundSize||20,now=Date.now();
 
