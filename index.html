@@ -697,8 +697,8 @@ function buildPool(cat,scope){
     return result.length>0?result:shuffle(learned).slice(0,size);
   }
 
-  // 自由練習：加權混合
-  return buildWeightedMixed(base,size);
+  // 自由練習（新字+複習）：整個範圍純隨機洗牌，每次都是不同的一批
+  return shuffle(base).slice(0,size);
 }
 
 /* ── Flash cards ── */
