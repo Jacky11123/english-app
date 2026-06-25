@@ -577,44 +577,63 @@ function buildWeightedMixed(list,size){
   return result.slice(0,size)
 }
 function buildPool(cat,scope){
-  var unlocked=allowed(),currentGrade=WORDS.filter(function(w){return w.grade===s.grade}),base,size=s.roundSize||20,now=Date.now();
-  if(cat&&cat!=="全部")base=unlocked.filter(function(w){return w.category===cat});
-  else if(scope==="current")base=unlocked; // 目前年級以內全部（含低年級），非只當前年級
-  else if(scope==="all")base=unlocked;
-  else base=unlocked;
+  var unlocked=allowed();
+  var base,size=s.roundSize||20,now=Date.now();
+
+  // 1. 決定母池
+  if(cat&&cat!=="全部"){
+    base=unlocked.filter(function(w){return w.category===cat});
+  } else {
+    base=unlocked; // 所有情況都用已解鎖年級
+  }
+
+  // 2. 分類
   var fresh=base.filter(function(w){return!s.progress[String(w.id)]});
   var learned=base.filter(function(w){return!!s.progress[String(w.id)]});
   var due=base.filter(function(w){var p=s.progress[String(w.id)];return p&&p.due<=now});
-  if(scope==="weak")return base.filter(function(w){return weakScore(w)>0||due.indexOf(w)>=0}).sort(function(a,b){return weakScore(b)-weakScore(a)}).slice(0,size);
+
+  // 3. 特殊範圍：弱點、已學
+  if(scope==="weak"){
+    var weakList=base.filter(function(w){return weakScore(w)>0||due.indexOf(w)>=0});
+    weakList.sort(function(a,b){return weakScore(b)-weakScore(a)});
+    return weakList.length>0?weakList.slice(0,size):shuffle(learned).slice(0,size);
+  }
   if(scope==="learned"){
-    // 只練已學：忽略 mode，永遠只出已學的字；沒有已學字時給提示用空陣列
-    return shuffle(learned).slice(0,size);
+    return shuffle(learned).slice(0,size); // 空的話 nextCard 會顯示提示
   }
-  // 自由練習模式：尊重 s.mode 設定
-  if(scope==="all"||scope==="unlocked"||scope==="current"){
-    if(s.mode==="new"){
-      var onlyFresh=shuffle(base.filter(function(w){return!s.progress[String(w.id)]}));
-      return onlyFresh.length>0?onlyFresh.slice(0,size):shuffle(learned).slice(0,size);
-    }
-    if(s.mode==="review"){
-      return shuffle(due).length>0?shuffle(due).slice(0,size):shuffle(learned).slice(0,size);
-    }
-    return buildWeightedMixed(base,size);
-  }
-  if(s.mode==="review")return shuffle(due);
+
+  // 4. 依學習模式決定抽法
   if(s.mode==="new"){
-    // 優先抽當前年級的新字，不夠再往低年級補
-    var gradeNewWords=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
-    var otherNewWords=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
-    var priorityFresh=gradeNewWords.concat(otherNewWords);
-    var nw=priorityFresh.slice(0,Math.max(0,s.goal-s.today));
-    return nw.length>0?nw:shuffle(learned).slice(0,size)
+    // 只學新字：優先當前年級的新字，不夠補低年級
+    var gradeNew=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
+    var otherNew=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
+    var allNew=gradeNew.concat(otherNew);
+    if(scope==="mission"){
+      // 今日任務：受每日上限控制
+      var quota=Math.max(0,s.goal-s.today);
+      return quota>0?allNew.slice(0,quota):shuffle(learned).slice(0,size);
+    }
+    return allNew.length>0?allNew.slice(0,size):shuffle(learned).slice(0,size);
   }
-  // 新字+複習：複習優先，新字補到目標數，但新字也優先當前年級
-  var gradeFirst=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
-  var otherFirst=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
-  var sortedFresh=gradeFirst.concat(otherFirst);
-  return shuffle(due).concat(sortedFresh.slice(0,Math.max(0,s.goal-s.today)))
+
+  if(s.mode==="review"){
+    // 只複習：只出已學且到期的字
+    return due.length>0?shuffle(due).slice(0,size):shuffle(learned).slice(0,size);
+  }
+
+  // 新字+複習（mixed）
+  if(scope==="mission"){
+    // 今日任務：複習優先＋新字補到上限
+    var quota2=Math.max(0,s.goal-s.today);
+    var gradeNew2=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
+    var otherNew2=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
+    var newPart=gradeNew2.concat(otherNew2).slice(0,quota2);
+    var result=shuffle(due).concat(newPart);
+    return result.length>0?result:shuffle(learned).slice(0,size);
+  }
+
+  // 自由練習：加權混合
+  return buildWeightedMixed(base,size);
 }
 
 /* ── Flash cards ── */
