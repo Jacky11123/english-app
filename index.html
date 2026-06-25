@@ -602,8 +602,19 @@ function buildPool(cat,scope){
     return buildWeightedMixed(base,size);
   }
   if(s.mode==="review")return shuffle(due);
-  if(s.mode==="new"){var nw=shuffle(fresh).slice(0,Math.max(0,s.goal-s.today));return nw.length>0?nw:shuffle(learned).slice(0,size)}
-  return shuffle(due).concat(shuffle(fresh).slice(0,Math.max(0,s.goal-s.today)))
+  if(s.mode==="new"){
+    // 優先抽當前年級的新字，不夠再往低年級補
+    var gradeNewWords=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
+    var otherNewWords=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
+    var priorityFresh=gradeNewWords.concat(otherNewWords);
+    var nw=priorityFresh.slice(0,Math.max(0,s.goal-s.today));
+    return nw.length>0?nw:shuffle(learned).slice(0,size)
+  }
+  // 新字+複習：複習優先，新字補到目標數，但新字也優先當前年級
+  var gradeFirst=shuffle(fresh.filter(function(w){return w.grade===s.grade}));
+  var otherFirst=shuffle(fresh.filter(function(w){return w.grade!==s.grade}));
+  var sortedFresh=gradeFirst.concat(otherFirst);
+  return shuffle(due).concat(sortedFresh.slice(0,Math.max(0,s.goal-s.today)))
 }
 
 /* ── Flash cards ── */
