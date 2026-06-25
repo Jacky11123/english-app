@@ -519,6 +519,18 @@ g("settingsBtn").onclick=function(){
 };
 g("drawerOverlay").onclick=function(e){
   if(e.target===g("drawerOverlay")){
+    // 檢查是否有未套用的更改
+    var changed = parseInt(g("grade").value,10)!==s.grade ||
+                  parseInt(g("goal").value,10)!==s.goal ||
+                  g("mode").value!==s.mode ||
+                  g("practiceScope").value!==s.practiceScope ||
+                  parseInt(g("roundSize").value,10)!==s.roundSize;
+    if(changed){
+      if(confirm("你有尚未套用的設定更改，要套用嗎？\n（按「確定」套用，按「取消」放棄更改）")){
+        g("confirmSettings").click();
+        return;
+      }
+    }
     g("drawerOverlay").classList.remove("open");
     g("drawer").classList.remove("open")
   }
@@ -540,9 +552,17 @@ g("confirmSettings").onclick=function(){
   save();
   g("drawerOverlay").classList.remove("open");
   g("drawer").classList.remove("open");
-  setSettingsLock(false);
-  showPage("dashboard");
-  stats();renderTopics();renderProgress();
+  // 判斷目前是否在練習進行中
+  var inPlay = g("page-cards").classList.contains("active") && g("cardsPlay").style.display!=="none";
+  if(inPlay){
+    // 練習中改設定 → 用新設定重新開始同一種練習
+    alert("設定已套用，將以新設定重新開始練習。");
+    startCards("全部", s.practiceScope);
+  } else {
+    // 不在練習中 → 回首頁更新顯示
+    showPage("dashboard");
+    stats();renderTopics();renderProgress();
+  }
 };
 
 g("resetBtn").onclick=function(){if(confirm("確定清除所有學習進度？")){localStorage.removeItem(KEY);location.reload()}};
